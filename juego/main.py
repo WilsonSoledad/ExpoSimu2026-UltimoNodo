@@ -1,7 +1,7 @@
 """
 Último Nodo - ExpoSimu 2026 - Simulación por computador (UPTC)
 
-Ejecutar:  python main.py
+Ejecutar desde la carpeta juego/:  python main.py
 
 Máquina de estados:
     menu -> controles
@@ -11,13 +11,20 @@ Máquina de estados:
     jugando -> victoria -> menu
 """
 import sys
+from pathlib import Path
+
+# Raíz del repositorio en la ruta de importación, para que los adaptadores
+# de modelos/ puedan importar los módulos independientes de ../modulos y
+# los generadores de ../prng (por ejemplo: from modulos import carrillo_modelo1_colas).
+RAIZ = Path(__file__).resolve().parent.parent
+sys.path.append(str(RAIZ))
 
 import pygame
 
 import config as C
-from prng import crear_flujos
-from juego.nivel import Nivel
-from juego import ui
+from aleatorio import crear_flujos
+from logica.nivel import Nivel
+from logica import ui
 
 
 class Juego:
