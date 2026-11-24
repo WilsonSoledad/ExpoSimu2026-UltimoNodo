@@ -9,7 +9,8 @@ RAIZ = Path(__file__).resolve().parents[1]
 if str(RAIZ) not in sys.path:
     sys.path.append(str(RAIZ))
 
-from modulos import Paredes_Carrillo_Soledad_Suarez_modelo1_colas as modelo1                           # noqa: E402
-from modulos import Paredes_Carrillo_Soledad_Suarez_modelo2_caminatas as modelo2                       # noqa: E402
-from modulos import Paredes_Carrillo_Soledad_Suarez_modelo4_agentes as modelo4
-from modulos import Paredes_Carrillo_Soledad_Suarez_modelo5_sir as modelo5      # noqa: E402
+from modulos import Paredes_Carrillo_Soledad_Suarez_modelo1_colas as modelo1          # noqa: E402
+from modulos import Paredes_Carrillo_Soledad_Suarez_modelo2_caminatas as modelo2      # noqa: E402
+from modulos import Paredes_Carrillo_Soledad_Suarez_modelo3_montecarlo as modelo3     # noqa: E402
+from modulos import Paredes_Carrillo_Soledad_Suarez_modelo4_agentes as modelo4        # noqa: E402
+from modulos import Paredes_Carrillo_Soledad_Suarez_modelo5_sir as modelo5            # noqa: E402
