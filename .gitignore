@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.ipynb_checkpoints/
+
+# Editores y sistema
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Archivos temporales de Word
+~$*.docx
+
+# Videos (GitHub rechaza archivos de más de 100 MB; se enlazan en el README)
+*.mp4
+*.mov
+*.mkv
