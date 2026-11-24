@@ -36,8 +36,8 @@ python carrillo_modelo1_colas.py          # un módulo independiente
 
 | N.º | Modelo | Módulo | Responsable | Estado |
 |---|---|---|---|---|
-| 1 | Colas | `carrillo_modelo1_colas.py` | Carrillo | Entregado. El juego usa su generador; falta la capacidad K |
-| 2 | Caminata aleatoria | `carrillo_modelo2_caminatas.py` | Carrillo | Entregado. El juego usa su generador; la regla de paso se replica en el adaptador |
+| 1 | Colas | `Paredes_Carrillo_Soledad_Suarez_modelo1_colas.py` | Carrillo | Entregado. El juego usa su generador; falta la capacidad K |
+| 2 | Caminata aleatoria | `Paredes_Carrillo_Soledad_Suarez_modelo2_caminatas.py` | Carrillo | Entregado. El juego usa su generador; la regla de paso se replica en el adaptador |
 | 3 | Monte Carlo | — | Integrante 3 | Pendiente |
 | 4 | Basado en agentes | `Paredes_Carrillo_Soledad_Suarez_modelo4_agentes.py` | Paredes | Entregado; pendiente ajustar a acciones discretas |
 | 5 | Dinámica de sistemas (SIR) | `Paredes_Carrillo_Soledad_Suarez_modelo5_sir.py` | Paredes | Entregado e integrado (ecuaciones, RK4 y pico teórico) |
