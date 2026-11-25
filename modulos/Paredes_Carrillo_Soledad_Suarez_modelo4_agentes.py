@@ -106,6 +106,43 @@ GATE_HEALTH = np.array([0.8, 0.3, 0.6])
 WEAK = int(np.argmin(GATE_HEALTH))          # puerta más débil
 
 
+def regla_rumbo(pos, theta, alpha, r, eta, w, r_sep, u, L=None, sep_gain=1.0,
+                acoplamiento_global=False, calcular_distancias=False):
+    """
+    Un paso de la regla de actualización del rumbo (la usan swarm_run y el juego):
+        u_i = (1/n_i) sum_{j in B_r(i)} e^{i theta_j}  +  w e^{i alpha_i}
+              + g * sum_{j != i, d_ij < r_sep} (1 - d_ij/r_sep) (x_i - x_j)/d_ij
+        theta_i(t+1) = arg(u_i) + eta (U_i - 1/2)
+    pos: (N, 2); theta: (N,); alpha: escalar o (N,) (dirección hacia la puerta más débil);
+    u: (N,) uniformes del PRNG; L: lado del toro, o None si el plano no es periódico.
+    Retorna (theta_nuevo, dist2), con dist2 = None si no se calcularon distancias.
+    """
+    N = len(theta)
+    c, s = np.cos(theta), np.sin(theta)
+    dist2 = d = None
+    if (not acoplamiento_global) or r_sep > 0 or calcular_distancias:
+        d = pos[:, None, :] - pos[None, :, :]
+        if L is not None:
+            d -= L * np.round(d / L)
+        dist2 = (d ** 2).sum(-1)
+    if acoplamiento_global:
+        ux, uy = np.full(N, c.mean()), np.full(N, s.mean())
+    else:
+        A = (dist2 <= r * r).astype(float)
+        n = A.sum(1)
+        ux, uy = (A @ c) / n, (A @ s) / n
+    if w > 0:
+        ux = ux + w * np.cos(alpha)
+        uy = uy + w * np.sin(alpha)
+    if r_sep > 0:
+        dist = np.sqrt(dist2)
+        mask = (dist2 < r_sep * r_sep) & (dist2 > 0)
+        f = np.where(mask, (1 - dist / r_sep) / np.where(dist > 0, dist, 1.0), 0.0)
+        ux = ux + sep_gain * (f * d[:, :, 0]).sum(1)
+        uy = uy + sep_gain * (f * d[:, :, 1]).sum(1)
+    return np.arctan2(uy, ux) + eta * (np.asarray(u) - 0.5), dist2
+
+
 def swarm_run(N, L, r, eta, v0, steps, prng, track_msd=False, w=0.0, r_sep=0.0,
               sep_gain=1.0, window=0.4):
     """
@@ -129,28 +166,9 @@ def swarm_run(N, L, r, eta, v0, steps, prng, track_msd=False, w=0.0, r_sep=0.0,
     msd = np.zeros(steps) if track_msd else None
 
     for t in range(steps):
-        c, s = np.cos(theta), np.sin(theta)
-        need_d = (not global_coupling) or r_sep > 0 or t >= start
-        if need_d:
-            d = pos[:, None, :] - pos[None, :, :]
-            d -= L * np.round(d / L)
-            dist2 = (d ** 2).sum(-1)
-        if global_coupling:
-            ux, uy = np.full(N, c.mean()), np.full(N, s.mean())
-        else:
-            A = (dist2 <= r * r).astype(float)
-            n = A.sum(1)
-            ux, uy = (A @ c) / n, (A @ s) / n
-        if w > 0:
-            ux = ux + w * math.cos(alpha)
-            uy = uy + w * math.sin(alpha)
-        if r_sep > 0:
-            dist = np.sqrt(dist2)
-            mask = (dist2 < r_sep * r_sep) & (dist2 > 0)
-            f = np.where(mask, (1 - dist / r_sep) / np.where(dist > 0, dist, 1.0), 0.0)
-            ux = ux + sep_gain * (f * d[:, :, 0]).sum(1)
-            uy = uy + sep_gain * (f * d[:, :, 1]).sum(1)
-        theta = np.arctan2(uy, ux) + eta * (prng.array(N) - 0.5)
+        theta, dist2 = regla_rumbo(pos, theta, alpha, r, eta, w, r_sep, prng.array(N), L=L,
+                                   sep_gain=sep_gain, acoplamiento_global=global_coupling,
+                                   calcular_distancias=(t >= start))
         step = v0 * np.column_stack((np.cos(theta), np.sin(theta)))
         if t >= start:
             d2 = dist2.copy()

@@ -54,6 +54,7 @@ def dibujar_nivel(sup, nivel, f, ingeniero=False):
     _gusanos(sup, nivel)
     _agentes(sup, nivel)
     _nucleo(sup, nivel)
+    _oleada(sup, nivel, f)
     _hud(sup, nivel, f)
     _panel(sup, nivel, f)
     _mensajes(sup, nivel, f)
@@ -124,7 +125,7 @@ def _puertas_y_paquetes(sup, nivel, f):
         pygame.draw.rect(sup, borde, rect, 3, border_radius=6)
         barra(sup, rect.x + 4, rect.bottom - 9, rect.w - 8, 5, lleno, borde)
         texto(sup, f.chica, f"c{m.c}", COL["texto"], (pu.x, pu.y - 5), centro=True)
-        texto(sup, f.chica, f"K{m.K}", COL["texto2"], (pu.x, pu.y + 24), centro=True)
+        texto(sup, f.chica, f"K{m.K} μ{m.mu:.2f}", COL["texto2"], (pu.x, pu.y + 24), centro=True)
 
 
 def _gusanos(sup, nivel):
@@ -135,19 +136,24 @@ def _gusanos(sup, nivel):
             pygame.draw.circle(sup, COL["rojo"], (x, y), 2 + k // 2, 1)
         x = C.CAMPO_X + g.col * C.CELDA + C.CELDA / 2
         y = C.CAMPO_Y + g.fila * C.CELDA + C.CELDA / 2
-        pygame.draw.circle(sup, COL["rojo"], (x, y), 7)
-        pygame.draw.circle(sup, COL["fondo"], (x + 2, y - 2), 2)
+        if g.generacion > 0:
+            # Hidra (generación 2) o fragmento (1): más grande, con una cabeza por generación
+            r = 8 + 4 * g.generacion
+            pygame.draw.circle(sup, COL["rojo"], (x, y), r)
+            pygame.draw.circle(sup, COL["naranja"], (x, y), r + 3, 2)
+            for k in range(g.generacion + 1):
+                ang = -math.pi / 2 + (k - g.generacion / 2) * 0.9
+                pygame.draw.circle(sup, COL["fondo"], (x + (r - 4) * math.cos(ang), y + (r - 4) * math.sin(ang)), 2)
+        else:
+            pygame.draw.circle(sup, COL["rojo"], (x, y), 7)
+            pygame.draw.circle(sup, COL["fondo"], (x + 2, y - 2), 2)
 
 
 def _agentes(sup, nivel):
     if not nivel.agentes:
         return
     for b in nivel.agentes.bots:
-        if b.objetivo is not None:
-            pu = nivel.puertas[b.objetivo]
-            ang = math.atan2(pu.y - b.y, pu.x - b.x)
-        else:
-            ang = 0.0
+        ang = b.theta           # el triángulo apunta en la dirección real del rumbo
         pts = [(b.x + 9 * math.cos(ang), b.y + 9 * math.sin(ang)),
                (b.x + 7 * math.cos(ang + 2.5), b.y + 7 * math.sin(ang + 2.5)),
                (b.x + 7 * math.cos(ang - 2.5), b.y + 7 * math.sin(ang - 2.5))]
@@ -161,6 +167,21 @@ def _nucleo(sup, nivel):
     pygame.draw.circle(sup, color, (x, y), 22 + pulso, 3)
     hexagono = [(x + 14 * math.cos(math.pi / 3 * k), y + 14 * math.sin(math.pi / 3 * k)) for k in range(6)]
     pygame.draw.polygon(sup, color, hexagono)
+
+
+def _oleada(sup, nivel, f):
+    """Indicador de la oleada en la parte superior del campo."""
+    x, y = C.PANEL_X // 2, C.HUD_ALTO + 14
+    if nivel.estado != "jugando" or nivel.t >= nivel.n_oleadas * nivel.ciclo:
+        return
+    if nivel.en_oleada:
+        resta = C.OLEADA_DURACION - nivel.t_fase
+        texto(sup, f.normal, f"Oleada {nivel.oleada} de {nivel.n_oleadas} · {resta:.0f} s",
+              COL["magenta"], (x, y), centro=True)
+    else:
+        resta = C.OLEADA_PAUSA - nivel.t_fase
+        texto(sup, f.media, f"Preparación · oleada {nivel.oleada} de {nivel.n_oleadas} en {resta:.0f} s",
+              COL["amarillo"], (x, y + 4), centro=True)
 
 
 # =================================================================== HUD
@@ -224,7 +245,8 @@ def _panel(sup, nivel, f):
         p, margen, n, _ = nivel.prediccion
         color = COL["naranja"] if p > 0.5 else COL["verde"]
         texto(sup, f.normal, f"P(brecha) = {p:.2f} ± {margen:.2f}", color, (x, y))
-        texto(sup, f.chica, f"{n} simulaciones, próximos 20 s", COL["texto2"], (x, y + 20))
+        texto(sup, f.chica, f"{n} simulaciones de una oleada ({C.OLEADA_DURACION:.0f} s)",
+              COL["texto2"], (x, y + 20))
     elif nivel.mc:
         texto(sup, f.chica, "Pulsa P para simular la próxima oleada.", COL["texto2"], (x, y))
     else:
@@ -236,6 +258,7 @@ def _panel(sup, nivel, f):
     ayuda = [
         ("Clic izq. en puerta", f"+1 servidor ({C.COSTOS['servidor']})"),
         ("Clic der. en puerta", f"+2 capacidad ({C.COSTOS['capacidad']})"),
+        ("Shift + clic puerta", f"μ + {C.MU_PASO:.2f} ({C.COSTOS['servicio']})"),
         ("E + clic", f"Escáner ({C.COSTOS['escaner']})" + ("  [ACTIVO]" if nivel.modo_escaner else "")),
         ("P", f"Predictor ({C.COSTOS['predictor']})"),
         ("H", f"Parche ({C.COSTOS['parche']} o gratis)"),
@@ -323,6 +346,7 @@ def pantalla_controles(sup, f):
     filas = [
         ("Clic izquierdo en una puerta", "Agregar un servidor (c + 1)"),
         ("Clic derecho en una puerta", "Ampliar capacidad (K + 2)"),
+        ("Shift + clic izquierdo en una puerta", f"Mejorar servicio (μ + {C.MU_PASO:.2f})"),
         ("E, luego clic en una celda", "Instalar escáner contra gusanos"),
         ("P", "Predictor Monte Carlo"),
         ("H", "Aplicar parche a la red (γ × 3)"),

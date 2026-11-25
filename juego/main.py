@@ -56,7 +56,8 @@ class Juego:
         if ev.type == pygame.KEYDOWN:
             getattr(self, f"_tecla_{self.estado}")(ev.key)
         elif ev.type == pygame.MOUSEBUTTONDOWN and self.estado == "jugando":
-            self.nivel.clic(ev.pos[0], ev.pos[1], ev.button)
+            shift = bool(pygame.key.get_mods() & pygame.KMOD_SHIFT)
+            self.nivel.clic(ev.pos[0], ev.pos[1], ev.button, shift)
 
     def _tecla_menu(self, k):
         if k in (pygame.K_UP, pygame.K_w):
@@ -137,7 +138,9 @@ class Juego:
         else:
             ui.dibujar_nivel(sup, self.nivel, f, self.ingeniero and self.estado == "jugando")
             n = self.nivel
-            resumen = [f"Amenazas eliminadas: {n.eliminados}", f"Brechas: {n.brechas}",
+            superadas = n.n_oleadas if n.estado == "ganado" else n.oleada - 1
+            resumen = [f"Oleadas superadas: {superadas} de {n.n_oleadas}",
+                       f"Amenazas eliminadas: {n.eliminados}", f"Brechas: {n.brechas}",
                        f"Tiempo: {n.t:.0f} s"]
             if self.estado == "pausa":
                 ui.pantalla_pausa(sup, f)

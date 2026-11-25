@@ -48,10 +48,18 @@ class Nivel:
         self.eliminados = 0
         self.brechas = 0
 
+        # Oleadas: preparación (OLEADA_PAUSA s) + ataque (OLEADA_DURACION s)
+        self.n_oleadas = cfg["oleadas"]
+        self.ciclo = C.OLEADA_PAUSA + C.OLEADA_DURACION
+        self.oleada = 1                  # oleada actual o próxima (1..n)
+        self.en_oleada = False           # False = preparación
+        self.t_fase = 0.0                # segundos transcurridos en la fase actual
+        self.enjambre_lanzado = False
+        self.hidras = 0                  # Hidras que han entrado al campo
+
         self.t_sig_paquete = self.puertas[0].modelo.interllegada()
         self.t_sig_gusano = exponencial(flujos["general"], cfg["tasa_gusanos"])
         self.t_paso_gusano = 0.0
-        self.t_sig_enjambre = cfg["agentes"]["periodo"] if cfg["agentes"] else None
 
     # ================================================================ update
     def actualizar(self, dt):
@@ -59,7 +67,8 @@ class Nivel:
             return
         self.t += dt
         self.energia = min(C.ENERGIA_MAX, self.energia + C.REGEN_ENERGIA * dt)
-        self.respaldo = min(100.0, self.respaldo + 100.0 * dt / self.cfg["duracion"])
+        self.respaldo = min(100.0, 100.0 * self.t / (self.n_oleadas * self.ciclo))
+        self._actualizar_oleada()
 
         self._actualizar_paquetes(dt)
         self._actualizar_gusanos(dt)
@@ -76,9 +85,36 @@ class Nivel:
 
         self._revisar_fin()
 
+    def _actualizar_oleada(self):
+        """Fase actual según el reloj: preparación -> oleada -> preparación ..."""
+        k = int(self.t // self.ciclo)                      # oleadas ya terminadas
+        if k >= self.n_oleadas:
+            self.en_oleada = False
+            return
+        fase = self.t - k * self.ciclo
+        en_oleada = fase >= C.OLEADA_PAUSA
+        self.t_fase = fase - C.OLEADA_PAUSA if en_oleada else fase
+        if en_oleada and not self.en_oleada:                 # empieza la oleada k+1
+            self.enjambre_lanzado = False
+            self.avisar(f"¡Oleada {k + 1} de {self.n_oleadas}!", C.PALETA["magenta"], 3)
+            if (k + 1) in self.cfg["hidra"]:
+                self._lanzar_hidra()
+        elif not en_oleada and self.en_oleada:               # termina una oleada
+            self.avisar(f"Oleada {k} superada"
+                        + (" · P para predecir la siguiente" if self.mc else ""), C.PALETA["verde"], 4)
+        self.oleada = k + 1
+        self.en_oleada = en_oleada
+
+    def _lanzar_hidra(self):
+        fila = entero(self.flujos["general"], 3, C.FILAS - 4)
+        self.gusanos.append(Gusano(0, fila, generacion=C.HIDRA_GENERACION))
+        self.hidras += 1
+        self.avisar("¡La Hidra entró a la red! Se divide al ser escaneada", C.PALETA["rojo"], 4)
+
     def _actualizar_paquetes(self, dt):
-        # Llegadas de Poisson al inicio del camino
-        self.t_sig_paquete -= dt
+        # Llegadas de Poisson al inicio del camino, solo durante las oleadas
+        if self.en_oleada:
+            self.t_sig_paquete -= dt
         while self.t_sig_paquete <= 0:
             p = Paquete()
             self.paquetes[p.id] = p
@@ -112,7 +148,8 @@ class Nivel:
             p.s += 1.0
 
     def _actualizar_gusanos(self, dt):
-        self.t_sig_gusano -= dt
+        if self.en_oleada:
+            self.t_sig_gusano -= dt
         while self.t_sig_gusano <= 0:
             self.gusanos.append(Gusano(0, entero(self.flujos["general"], 0, C.FILAS - 1)))
             self.t_sig_gusano += exponencial(self.flujos["general"], self.cfg["tasa_gusanos"])
@@ -129,7 +166,7 @@ class Nivel:
                 if g.col >= C.COLS - 1:
                     self.caminata.registrar_cruce(g.pasos)
                     self.gusanos.remove(g)
-                    self._impacto("gusano")
+                    self._impacto(g.tipo)
 
     def _actualizar_escaneres(self, dt):
         for e in self.escaneres:
@@ -144,13 +181,21 @@ class Nivel:
                         self.gusanos.remove(g)
                         e.destello = 0.3
                         self._recompensa()
+                        if g.generacion > 0:
+                            self._dividir(g)
+
+    def _dividir(self, g):
+        """La Hidra (o un fragmento) se divide en dos de la generación siguiente."""
+        for df in (-1, 1):
+            fila = min(C.FILAS - 1, max(0, g.fila + df))
+            self.gusanos.append(Gusano(g.col, fila, generacion=g.generacion - 1, pasos=g.pasos))
 
     def _actualizar_agentes(self, dt):
-        self.t_sig_enjambre -= dt
-        if self.t_sig_enjambre <= 0:
-            self.t_sig_enjambre += self.cfg["agentes"]["periodo"]
+        cfg_ag = self.cfg["agentes"]
+        if self.en_oleada and not self.enjambre_lanzado and self.t_fase >= cfg_ag["retraso"]:
+            self.enjambre_lanzado = True
             fila = entero(self.flujos["agentes"], 2, C.FILAS - 3)
-            self.agentes.generar_enjambre(self.cfg["agentes"]["tamano"], C.CAMPO_X + 10,
+            self.agentes.generar_enjambre(cfg_ag["tamano"], C.CAMPO_X + 10,
                                           C.CAMPO_Y + fila * C.CELDA)
             self.avisar("Se aproxima un enjambre de bots", C.PALETA["violeta"])
         objetivos = [(pu.x, pu.y, pu.debilidad()) for pu in self.puertas]
@@ -181,7 +226,8 @@ class Nivel:
         elif self.sir and self.sir.fraccion_infectada() > self.cfg["umbral_infeccion"]:
             umbral = int(self.cfg["umbral_infeccion"] * 100)
             self.estado, self.motivo = "perdido", f"Más del {umbral} % de la red quedó infectada."
-        elif self.respaldo >= 100:
+        elif self.t >= self.n_oleadas * self.ciclo:
+            self.respaldo = 100.0
             self.estado = "ganado"
 
     # ================================================================ acciones
@@ -196,11 +242,17 @@ class Nivel:
         self.energia -= costo
         return True
 
-    def clic(self, x, y, boton):
+    def clic(self, x, y, boton, shift=False):
         for pu in self.puertas:
             if pu.contiene(x, y):
                 m = pu.modelo
-                if boton == 1:
+                if boton == 1 and shift:
+                    if m.mu >= C.MAX_MU - 1e-9:
+                        self.avisar("Tasa de servicio máxima en esta puerta")
+                    elif self.gastar(C.COSTOS["servicio"]):
+                        m.mejorar_servicio(C.MU_PASO)
+                        self.avisar(f"Puerta {pu.indice + 1}: μ = {m.mu:.2f}", C.PALETA["cian"])
+                elif boton == 1:
                     if m.c >= C.MAX_SERVIDORES:
                         self.avisar("Máximo de servidores en esta puerta")
                     elif self.gastar(C.COSTOS["servidor"]):
@@ -227,7 +279,7 @@ class Nivel:
     def alternar_escaner(self):
         self.modo_escaner = not self.modo_escaner
 
-    def usar_predictor(self, n=400, horizonte=20.0):
+    def usar_predictor(self, n=400, horizonte=C.OLEADA_DURACION):
         if not self.mc:
             self.avisar("El Predictor se desbloquea en el nivel 2")
             return

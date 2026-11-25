@@ -58,12 +58,21 @@ class Paquete:
 
 
 class Gusano:
-    """Se mueve por la grilla con la caminata aleatoria."""
+    """Se mueve por la grilla con la caminata aleatoria.
 
-    def __init__(self, col, fila):
+    generacion > 0 indica la Hidra (2) o uno de sus fragmentos (1): al ser
+    alcanzado por un escáner se divide en dos gusanos de la generación siguiente.
+    """
+
+    def __init__(self, col, fila, generacion=0, pasos=0):
         self.col, self.fila = col, fila
-        self.pasos = 0
+        self.generacion = generacion
+        self.pasos = pasos
         self.rastro = []
+
+    @property
+    def tipo(self):
+        return {0: "gusano", 1: "fragmento"}.get(self.generacion, "hidra")
 
 
 class Escaner:
