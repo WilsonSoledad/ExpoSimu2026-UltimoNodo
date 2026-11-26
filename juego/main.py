@@ -14,8 +14,8 @@ import sys
 from pathlib import Path
 
 # Raíz del repositorio en la ruta de importación, para que los adaptadores
-# de modelos/ puedan importar los módulos independientes de ../modulos y
-# los generadores de ../prng (por ejemplo: from modulos import carrillo_modelo1_colas).
+# de modelos/ puedan importar los módulos independientes de ../modulos
+# (lo hace fuentes.py: from modulos import Paredes_Carrillo_Soledad_Suarez_modelo1_colas).
 RAIZ = Path(__file__).resolve().parent.parent
 sys.path.append(str(RAIZ))
 

@@ -102,7 +102,7 @@ que importan los módulos a través de `juego/fuentes.py`; no copian su código.
 | Modelo | Adaptador en el juego | Qué usa del módulo | Generador en el juego |
 |---|---|---|---|
 | Colas | `juego/modelos/colas.py` | `ModeloColas`, `teoria_mmck`, `simular_rapido` | Park-Miller (llegadas y servicio en flujos separados) |
-| Caminata | `juego/modelos/caminata.py` | Generador congruencial lineal | Congruencial lineal |
+| Caminata | `juego/modelos/caminata.py` | `paso_caminata` y generador congruencial lineal | Congruencial lineal |
 | Monte Carlo | `juego/modelos/montecarlo.py` | `ModeloMonteCarlo` y matriz de transición | Congruencial lineal |
 | Agentes | `juego/modelos/agentes.py` | `regla_rumbo`, `phi_global_theory` | Congruencial lineal |
 | SIR | `juego/modelos/sir.py` | `sir_rhs`, `peak_theory` | Ninguno (modelo determinista, RK4) |

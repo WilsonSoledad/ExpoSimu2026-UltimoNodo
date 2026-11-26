@@ -1,22 +1,33 @@
 """
-Modelo 2 - Caminata aleatoria sesgada en 2D para los gusanos (PROVISIONAL).
+Modelo 2 - Caminata aleatoria sesgada en 2D para los gusanos.
 
-Lo reemplaza el módulo del integrante 1. Interfaz que usa el juego:
+Adaptador del módulo de Carrillo (modulos/..._modelo2_caminatas.py): el juego
+usa su regla de un paso (paso_caminata), es decir, el método de intervalos
+acumulados con probabilidades (p_der, p_izq, p_arr, p_aba), y su generador
+congruencial lineal (a = 1664525, c = 1013904223, m = 2^32), que llega
+desde aleatorio.CongruencialLineal.
 
-    ModeloCaminata(gen, p_der, p_izq, p_arr, p_aba)
-    .paso() -> (dx, dy)            un paso sobre la grilla
-    .registrar_cruce(pasos)        un gusano llegó al Núcleo tras 'pasos' pasos
-    .metricas() -> list[(nombre, observado, teorico)]
+Lo que agrega este archivo es lo propio del juego:
+  - la grilla de pantalla tiene el eje y hacia abajo, así que el desvío
+    superior del módulo (+Y) es una fila menos en el juego;
+  - las paredes (la izquierda y los bordes superior e inferior) las aplica
+    logica/nivel.py, no este archivo;
+  - lleva los conteos que muestra el modo ingeniero.
 
-Caso de clase: caminata simple simétrica en Z^2, cada dirección con 1/4.
-Aquí se sesga hacia el Núcleo (derecha): p_der > p_izq.
 Teoría por paso en x:  E[dx] = p_der - p_izq
                        Var[dx] = p_der + p_izq - (p_der - p_izq)^2
 Tras n pasos:          E[X_n] = n (p_der - p_izq),  Var[X_n] = n Var[dx]
-"""
-from aleatorio import por_intervalos
 
-DIRECCIONES = [(1, 0), (-1, 0), (0, -1), (0, 1)]   # der, izq, arr, aba
+Interfaz que usa el juego:
+    ModeloCaminata(gen, p_der, p_izq, p_arr, p_aba)
+    .paso() -> (dx, dy)            un paso sobre la grilla (dy en filas de pantalla)
+    .registrar_cruce(pasos)        un gusano llegó al Núcleo tras 'pasos' pasos
+    .metricas() -> list[(nombre, observado, teorico)]
+"""
+from fuentes import modelo2
+
+# Paso del módulo (dx, dy) -> índice de dirección: der, izq, arr, aba
+INDICE = {(1, 0): 0, (-1, 0): 1, (0, 1): 2, (0, -1): 3}
 
 
 class ModeloCaminata:
@@ -38,12 +49,11 @@ class ModeloCaminata:
         return sum(self.conteo)
 
     def paso(self):
-        i = por_intervalos(self.gen, [0, 1, 2, 3], self.p)
-        self.conteo[i] += 1
-        dx, dy = DIRECCIONES[i]
+        dx, dy = modelo2.paso_caminata(self.gen.random(), self.p[0], self.p[1], self.p[2])
+        self.conteo[INDICE[(dx, dy)]] += 1
         self.suma_dx += dx
         self.suma_dx2 += dx * dx
-        return dx, dy
+        return dx, -dy          # +Y del módulo (arriba) = fila anterior en pantalla
 
     def registrar_cruce(self, pasos):
         self.cruces.append(pasos)

@@ -18,6 +18,27 @@ def congruencial_lineal(semilla, a, c, m, cantidad):
     return xi_lista, ri_lista
 
 # ==============================================================================
+# REGLA DE UN PASO (la usan la simulación de abajo y el juego)
+# ==============================================================================
+def paso_caminata(r, p_der, q_izq, p_arr):
+    """
+    Traduce un número R_i en [0, 1) en un paso de la caminata sesgada en 2D
+    (método de intervalos acumulados):
+        [0, p)                  -> (+1,  0)  avanza hacia el Núcleo (+X)
+        [p, p+q)                -> (-1,  0)  retrocede (-X)
+        [p+q, p+q+p_arr)        -> ( 0, +1)  desvío superior (+Y)
+        [p+q+p_arr, 1)          -> ( 0, -1)  desvío inferior (-Y)
+    """
+    if r < p_der:
+        return 1, 0
+    if r < p_der + q_izq:
+        return -1, 0
+    if r < p_der + q_izq + p_arr:
+        return 0, 1
+    return 0, -1
+
+
+# ==============================================================================
 # SIMULACIÓN DE CAMINATA ALEATORIA SESGADA EN 2D (Gusanos hacia el Núcleo)
 # ==============================================================================
 def simular_caminata_sesgada(n_pasos, p_der, q_izq, p_arr, p_aba, n_replicas=1000, semilla=98765):
@@ -41,17 +62,10 @@ def simular_caminata_sesgada(n_pasos, p_der, q_izq, p_arr, p_aba, n_replicas=100
         ruta_x, ruta_y = [0], [0]
 
         for _ in range(n_pasos):
-            r = ri[idx]
+            dx, dy = paso_caminata(ri[idx], p_der, q_izq, p_arr)
             idx += 1
-
-            if r < p_der:
-                x += 1          # Avanza hacia el Núcleo (+X)
-            elif r < p_der + q_izq:
-                x -= 1          # Retrocede (-X)
-            elif r < p_der + q_izq + p_arr:
-                y += 1          # Desvío nodo superior (+Y)
-            else:
-                y -= 1          # Desvío nodo inferior (-Y)
+            x += dx
+            y += dy
 
             if rep < 5:
                 ruta_x.append(x)
