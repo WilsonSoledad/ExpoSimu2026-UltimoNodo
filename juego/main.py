@@ -22,6 +22,7 @@ sys.path.append(str(RAIZ))
 import pygame
 
 import config as C
+import recursos
 from aleatorio import crear_flujos
 from logica.nivel import Nivel
 from logica import ui
@@ -62,9 +63,12 @@ class Juego:
     def _tecla_menu(self, k):
         if k in (pygame.K_UP, pygame.K_w):
             self.seleccion = (self.seleccion - 1) % len(self.OPCIONES)
+            recursos.sonar("menu_mover")
         elif k in (pygame.K_DOWN, pygame.K_s):
             self.seleccion = (self.seleccion + 1) % len(self.OPCIONES)
+            recursos.sonar("menu_mover")
         elif k in (pygame.K_RETURN, pygame.K_SPACE):
+            recursos.sonar("menu_confirmar")
             opcion = self.OPCIONES[self.seleccion]
             if opcion == "Jugar":
                 self.cargar_nivel(0)
@@ -120,14 +124,28 @@ class Juego:
     # ------------------------------------------------------------ ciclo
     def actualizar(self, dt):
         self.t_menu += dt
+        self._audio()
         if self.estado != "jugando":
             return
         self.nivel.actualizar(dt * self.velocidad)
         if self.nivel.estado == "perdido":
             self.estado = "game_over"
+            recursos.sonar("derrota")
         elif self.nivel.estado == "ganado":
             ultimo = self.indice == len(C.NIVELES) - 1
             self.estado = "victoria" if ultimo else "nivel_superado"
+            recursos.sonar("victoria")
+
+    def _audio(self):
+        """Música según la pantalla y efectos de los eventos del nivel."""
+        if self.estado in ("menu", "controles", "victoria"):
+            recursos.musica(C.MUSICA_MENU)
+        else:
+            recursos.musica(C.NIVELES[self.indice]["musica"])
+        if self.nivel:
+            for evento in self.nivel.eventos:
+                recursos.sonar(evento)
+            self.nivel.eventos.clear()
 
     def dibujar(self, sup):
         f = self.fuentes
@@ -160,6 +178,7 @@ def main():
     pygame.init()
     pantalla = pygame.display.set_mode((C.ANCHO, C.ALTO))
     pygame.display.set_caption("Último Nodo · ExpoSimu 2026")
+    recursos.iniciar()
     reloj = pygame.time.Clock()
     juego = Juego()
     while not juego.salir:

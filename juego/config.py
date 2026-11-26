@@ -38,6 +38,13 @@ PALETA = {
     "texto2":     "#6B7A99",   # texto secundario
 }
 
+# ---------------------------------------------------------------- Sprites y audio
+# Archivos en juego/assets (créditos en assets/audio/CREDITOS.md).
+CUADROS_POR_SEGUNDO = 6         # velocidad de las animaciones de los sprites
+VOLUMEN_MUSICA = 0.45
+VOLUMEN_EFECTOS = 0.6
+MUSICA_MENU = "casualty_loop2.ogg"
+
 # ---------------------------------------------------------------- Economía
 ENERGIA_MAX = 300
 REGEN_ENERGIA = 2.0             # energía por segundo
@@ -84,6 +91,7 @@ OLEADA_DURACION = 20.0  # igual al horizonte T del Predictor Monte Carlo
 NIVELES = [
     {
         "nombre": "Red del campus",
+        "musica": "casualty_loop2.ogg",
         "descripcion": "Tutorial · 5 oleadas: firewalls (colas) y gusanos (caminatas).",
         "modelos": {"colas", "caminatas"},
         "oleadas": 5,
@@ -99,6 +107,7 @@ NIVELES = [
     },
     {
         "nombre": "Zona de infección",
+        "musica": "casualty_loop3.ogg",
         "descripcion": "8 oleadas · se activan el Predictor (Monte Carlo) y la infección (SIR).",
         "modelos": {"colas", "caminatas", "montecarlo", "sir"},
         "oleadas": 8,
@@ -115,6 +124,7 @@ NIVELES = [
     },
     {
         "nombre": "El Núcleo",
+        "musica": "casualty_loop1.ogg",
         "descripcion": "8 oleadas · los cinco modelos, enjambres de bots y la Hidra.",
         "modelos": {"colas", "caminatas", "montecarlo", "sir", "agentes"},
         "oleadas": 8,

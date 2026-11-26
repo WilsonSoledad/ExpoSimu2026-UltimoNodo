@@ -47,6 +47,9 @@ class Nivel:
         self.motivo = ""
         self.eliminados = 0
         self.brechas = 0
+        # Eventos del último fotograma ("brecha", "mejora", ...). main.py los
+        # convierte en efectos de sonido; la lógica no depende del audio.
+        self.eventos = []
 
         # Oleadas: preparación (OLEADA_PAUSA s) + ataque (OLEADA_DURACION s)
         self.n_oleadas = cfg["oleadas"]
@@ -96,6 +99,7 @@ class Nivel:
         self.t_fase = fase - C.OLEADA_PAUSA if en_oleada else fase
         if en_oleada and not self.en_oleada:                 # empieza la oleada k+1
             self.enjambre_lanzado = False
+            self.eventos.append("oleada")
             self.avisar(f"¡Oleada {k + 1} de {self.n_oleadas}!", C.PALETA["magenta"], 3)
             if (k + 1) in self.cfg["hidra"]:
                 self._lanzar_hidra()
@@ -180,8 +184,10 @@ class Nivel:
                     if bernoulli(self.flujos["general"], C.PROB_ESCANER):
                         self.gusanos.remove(g)
                         e.destello = 0.3
+                        self.eventos.append("gusano_eliminado")
                         self._recompensa()
                         if g.generacion > 0:
+                            self.eventos.append("hidra_division")
                             self._dividir(g)
 
     def _dividir(self, g):
@@ -207,6 +213,7 @@ class Nivel:
     def _impacto(self, tipo):
         self.integridad = max(0.0, self.integridad - C.DANO[tipo])
         self.brechas += 1
+        self.eventos.append("brecha")
         if self.sir:
             self.sir.infectar(C.INFECCION[tipo])
 
@@ -238,6 +245,7 @@ class Nivel:
     def gastar(self, costo):
         if self.energia < costo:
             self.avisar("Energía insuficiente", C.PALETA["naranja"])
+            self.eventos.append("energia_insuficiente")
             return False
         self.energia -= costo
         return True
@@ -251,18 +259,21 @@ class Nivel:
                         self.avisar("Tasa de servicio máxima en esta puerta")
                     elif self.gastar(C.COSTOS["servicio"]):
                         m.mejorar_servicio(C.MU_PASO)
+                        self.eventos.append("mejora")
                         self.avisar(f"Puerta {pu.indice + 1}: μ = {m.mu:.2f}", C.PALETA["cian"])
                 elif boton == 1:
                     if m.c >= C.MAX_SERVIDORES:
                         self.avisar("Máximo de servidores en esta puerta")
                     elif self.gastar(C.COSTOS["servidor"]):
                         m.agregar_servidor()
+                        self.eventos.append("mejora")
                         self.avisar(f"Puerta {pu.indice + 1}: c = {m.c}", C.PALETA["cian"])
                 elif boton == 3:
                     if m.K >= C.MAX_CAPACIDAD:
                         self.avisar("Capacidad máxima en esta puerta")
                     elif self.gastar(C.COSTOS["capacidad"]):
                         m.ampliar_capacidad(2)
+                        self.eventos.append("mejora")
                         self.avisar(f"Puerta {pu.indice + 1}: K = {m.K}", C.PALETA["cian"])
                 return
         if self.modo_escaner and boton == 1:
@@ -275,6 +286,7 @@ class Nivel:
                 self.avisar("No se puede instalar ahí", C.PALETA["naranja"])
             elif self.gastar(C.COSTOS["escaner"]):
                 self.escaneres.append(Escaner(col, fila))
+                self.eventos.append("mejora")
 
     def alternar_escaner(self):
         self.modo_escaner = not self.modo_escaner
@@ -300,6 +312,7 @@ class Nivel:
         p, margen = self.mc.estimar_probabilidad(experimento, n)
         self.mc.ultima = ("P(brecha en 20 s)", p, margen, n, float("nan"))
         self.prediccion = (p, margen, n, 8.0)
+        self.eventos.append("predictor")
 
     def usar_parche(self):
         if not self.sir:
@@ -310,6 +323,7 @@ class Nivel:
         elif not self.gastar(C.COSTOS["parche"]):
             return
         self.sir.aplicar_parche(duracion=10.0, factor=3.0)
+        self.eventos.append("parche")
         self.avisar("Parche aplicado: γ × 3 durante 10 s", C.PALETA["verde"])
 
     def segmentar(self):
@@ -318,6 +332,7 @@ class Nivel:
             return
         if self.gastar(C.COSTOS["segmentar"]):
             self.sir.segmentar(0.75)
+            self.eventos.append("segmentar")
             self.avisar(f"Red segmentada: β = {self.sir.beta:.3f}", C.PALETA["verde"])
 
     # ================================================================ métricas

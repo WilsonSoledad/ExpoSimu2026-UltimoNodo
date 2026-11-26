@@ -118,8 +118,34 @@ juego/
   fuentes.py        Único punto de importación de los módulos
   modelos/          Adaptadores de los cinco modelos
   logica/           Niveles, entidades e interfaz gráfica
+  recursos.py       Carga de sprites y audio (si falta un archivo, el juego sigue sin él)
+  assets/
+    sprites/        Paquete, gusano, bot, Hidra y fragmento (4 cuadros cada uno)
+    audio/          Música, efectos y CREDITOS.md
+docs/arte/          Sprites base y script que los adapta al juego (punto 3.2)
 requirements.txt
 ```
+
+## Sprites y audio (punto 3.2)
+
+| Entidad | Sprite | Color de la paleta |
+|---|---|---|
+| Paquete malicioso | Araña | Magenta `#FF2E88` |
+| Gusano de red | Serpiente | Rojo `#FF3B3B` |
+| Bot del enjambre | Robot | Violeta `#9D4EDD` |
+| Hidra y sus fragmentos | Dragón | Rojo y naranja `#FF8C42` |
+
+Puertas, escáneres y el Núcleo se dibujan con figuras geométricas. Los sprites se generan
+desde las imágenes base con `docs/arte/procesar_sprites.py` (separa los 4 cuadros, los limpia,
+los reduce al tamaño de la grilla y los recolorea a la paleta):
+
+```
+python docs/arte/procesar_sprites.py docs/arte/base juego/assets/sprites docs/arte
+```
+
+**Música:** Music by Karl Casey @ White Bat Audio (*Free Cyberpunk Loop Pack*).
+**Efectos:** Kenney (*Sci-Fi Sounds* e *Interface Sounds*, CC0).
+Detalle archivo por archivo en `juego/assets/audio/CREDITOS.md`.
 
 ## Reproducibilidad
 

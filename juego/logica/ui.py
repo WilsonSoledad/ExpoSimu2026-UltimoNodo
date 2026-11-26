@@ -1,13 +1,15 @@
 """Dibujo de la escena, el HUD, el panel lateral, el modo ingeniero y los menús.
 
-Los gráficos son figuras geométricas provisionales; se reemplazan por los
-sprites del integrante 3 sin tocar la lógica.
+Paquetes, gusanos, la Hidra y los bots usan los sprites de assets/sprites
+(recursos.py); si un sprite falta, se dibuja su figura geométrica. Puertas,
+escáneres y el Núcleo son figuras geométricas.
 """
 import math
 
 import pygame
 
 import config as C
+import recursos
 
 COL = {k: pygame.Color(v) for k, v in C.PALETA.items()}
 
@@ -97,12 +99,26 @@ def _rombo(sup, color, x, y, r):
     pygame.draw.polygon(sup, color, [(x, y - r), (x + r, y), (x, y + r), (x - r, y)])
 
 
+def _sprite(sup, nombre, t, x, y, fase=0):
+    """Dibuja el cuadro actual del sprite centrado en (x, y). False si no hay sprite."""
+    img = recursos.sprite(nombre, t, fase)
+    if img is None:
+        return False
+    sup.blit(img, img.get_rect(center=(int(x), int(y))))
+    return True
+
+
 def _puertas_y_paquetes(sup, nivel, f):
     for p in nivel.paquetes.values():
         if p.estado == "moviendo":
             x, y = nivel.camino.punto(p.s)
-            color = COL["naranja"] if p.brecha else (COL["violeta"] if p.tipo == "bot" else COL["magenta"])
-            _rombo(sup, color, x, y, 7)
+            nombre = "bot" if p.tipo == "bot" else "paquete"
+            if _sprite(sup, nombre, nivel.t, x, y, p.id):
+                if p.brecha:     # amenaza que superó una puerta llena: anillo naranja
+                    pygame.draw.circle(sup, COL["naranja"], (int(x), int(y)), 14, 2)
+            else:
+                color = COL["naranja"] if p.brecha else (COL["violeta"] if p.tipo == "bot" else COL["magenta"])
+                _rombo(sup, color, x, y, 7)
     for pu in nivel.puertas:
         m = pu.modelo
         for p in nivel.paquetes.values():
@@ -115,8 +131,10 @@ def _puertas_y_paquetes(sup, nivel, f):
                     x, y = pu.x - 10 + i * 6, pu.y - 26 - i * 2
                 else:
                     x, y = nivel.camino.punto(pu.s - 16 * (i + 1))
-                color = COL["violeta"] if p.tipo == "bot" else COL["magenta"]
-                _rombo(sup, color, x, y, 6 if tipo == "cola" else 5)
+                nombre = "bot" if p.tipo == "bot" else "paquete"
+                if not _sprite(sup, nombre, nivel.t, x, y, p.id):
+                    color = COL["violeta"] if p.tipo == "bot" else COL["magenta"]
+                    _rombo(sup, color, x, y, 6 if tipo == "cola" else 5)
         rect = pygame.Rect(0, 0, 36, 36)
         rect.center = (pu.x, pu.y)
         lleno = m.en_sistema() / m.K
@@ -136,6 +154,8 @@ def _gusanos(sup, nivel):
             pygame.draw.circle(sup, COL["rojo"], (x, y), 2 + k // 2, 1)
         x = C.CAMPO_X + g.col * C.CELDA + C.CELDA / 2
         y = C.CAMPO_Y + g.fila * C.CELDA + C.CELDA / 2
+        if _sprite(sup, g.tipo, nivel.t, x, y, id(g)):      # gusano, fragmento o hidra
+            continue
         if g.generacion > 0:
             # Hidra (generación 2) o fragmento (1): más grande, con una cabeza por generación
             r = 8 + 4 * g.generacion
@@ -153,7 +173,12 @@ def _agentes(sup, nivel):
     if not nivel.agentes:
         return
     for b in nivel.agentes.bots:
-        ang = b.theta           # el triángulo apunta en la dirección real del rumbo
+        ang = b.theta           # rumbo real del bot (modelo de agentes)
+        if _sprite(sup, "bot", nivel.t, b.x, b.y, b.id):
+            # marca del rumbo para que se vea la orientación del enjambre
+            pygame.draw.line(sup, COL["violeta"], (b.x + 12 * math.cos(ang), b.y + 12 * math.sin(ang)),
+                             (b.x + 19 * math.cos(ang), b.y + 19 * math.sin(ang)), 2)
+            continue
         pts = [(b.x + 9 * math.cos(ang), b.y + 9 * math.sin(ang)),
                (b.x + 7 * math.cos(ang + 2.5), b.y + 7 * math.sin(ang + 2.5)),
                (b.x + 7 * math.cos(ang - 2.5), b.y + 7 * math.sin(ang - 2.5))]
@@ -337,7 +362,9 @@ def pantalla_menu(sup, f, opciones, seleccion, t):
         marca = "▶  " if i == seleccion else ""
         texto(sup, f.grande, marca + op, color, (C.ANCHO // 2, 320 + i * 56), centro=True)
     texto(sup, f.chica, "Flechas + Enter · ExpoSimu 2026 · Simulación por computador · UPTC",
-          COL["texto2"], (C.ANCHO // 2, C.ALTO - 30), centro=True)
+          COL["texto2"], (C.ANCHO // 2, C.ALTO - 48), centro=True)
+    texto(sup, f.chica, "Music by Karl Casey @ White Bat Audio · Efectos: Kenney (CC0)",
+          COL["texto2"], (C.ANCHO // 2, C.ALTO - 26), centro=True)
 
 
 def pantalla_controles(sup, f):
