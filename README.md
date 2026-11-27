@@ -154,7 +154,7 @@ Detalle archivo por archivo en `juego/assets/audio/CREDITOS.md`.
 
 ## Video
 
-Video de gameplay (5–8 min): [enlace pendiente].
+Video de gameplay (5–8 min): https://drive.google.com/file/d/1flzZZBvMhpBC5Zeoez76gHOEDOJ8P-oH/view?usp=sharing
 Los videos no se suben al repositorio porque GitHub rechaza archivos de más de 100 MB.
 
 ## Informe
