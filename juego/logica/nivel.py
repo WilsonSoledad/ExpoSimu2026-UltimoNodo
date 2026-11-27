@@ -251,6 +251,14 @@ class Nivel:
         return True
 
     def clic(self, x, y, boton, shift=False):
+        # Con el modo escáner activo, un clic izquierdo sobre una celda fuera del
+        # camino instala el escáner aunque quede a menos de 24 px de una puerta
+        # (antes compraba un servidor: caso de prueba 10). Los clics sobre el
+        # camino, donde están las puertas, siguen el flujo normal.
+        if self.modo_escaner and boton == 1 and not shift:
+            if celda_de(x, y) not in self.camino.celdas:
+                self._instalar_escaner(*celda_de(x, y))
+                return
         for pu in self.puertas:
             if pu.contiene(x, y):
                 m = pu.modelo
@@ -277,9 +285,10 @@ class Nivel:
                         self.avisar(f"Puerta {pu.indice + 1}: K = {m.K}", C.PALETA["cian"])
                 return
         if self.modo_escaner and boton == 1:
-            col, fila = celda_de(x, y)
-            if not (0 <= col < C.COLS and 0 <= fila < C.FILAS):
-                return
+            self._instalar_escaner(*celda_de(x, y))
+
+    def _instalar_escaner(self, col, fila):
+        if 0 <= col < C.COLS and 0 <= fila < C.FILAS:
             ocupada = (col, fila) in self.camino.celdas or any(
                 e.col == col and e.fila == fila for e in self.escaneres)
             if ocupada:

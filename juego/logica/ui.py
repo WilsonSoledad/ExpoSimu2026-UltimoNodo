@@ -359,8 +359,11 @@ def pantalla_menu(sup, f, opciones, seleccion, t):
           COL["texto2"], (C.ANCHO // 2, 225), centro=True)
     for i, op in enumerate(opciones):
         color = COL["amarillo"] if i == seleccion else COL["texto"]
-        marca = "▶  " if i == seleccion else ""
-        texto(sup, f.grande, marca + op, color, (C.ANCHO // 2, 320 + i * 56), centro=True)
+        r = texto(sup, f.grande, op, color, (C.ANCHO // 2, 320 + i * 56), centro=True)
+        if i == seleccion:
+            # triángulo dibujado (el carácter ▶ no existe en algunas fuentes de Windows)
+            x, y = r.left - 22, r.centery
+            pygame.draw.polygon(sup, color, [(x - 9, y - 11), (x - 9, y + 11), (x + 9, y)])
     texto(sup, f.chica, "Flechas + Enter · ExpoSimu 2026 · Simulación por computador · UPTC",
           COL["texto2"], (C.ANCHO // 2, C.ALTO - 48), centro=True)
     texto(sup, f.chica, "Music by Karl Casey @ White Bat Audio · Efectos: Kenney (CC0)",
